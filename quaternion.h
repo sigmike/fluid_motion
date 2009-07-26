@@ -1,3 +1,7 @@
+
+#ifndef QUATERNION_H
+#define QUATERNION_H
+
 typedef double VFLOAT;
 
 typedef struct {
@@ -13,3 +17,5 @@ void quaternion_multiply( QUATERNION *r, QUATERNION *a, QUATERNION *b );
 void quaternion_from_axisangle( QUATERNION *q, VECTOR3 *axis, VFLOAT angle);
 void quaternion_from_euler( QUATERNION *q, VFLOAT rx, VFLOAT ry, VFLOAT rz );
 void quaternion_to_axisangle(VECTOR3 *axis, VFLOAT *angle, QUATERNION *q);
+
+#endif
