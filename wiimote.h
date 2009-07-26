@@ -11,3 +11,6 @@ extern QUATERNION quat;
 
 int wiimote_init();
 int wiimote_close();
+
+void motionplus_motion(double phi, double theta, double psi);
+

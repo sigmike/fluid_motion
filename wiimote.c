@@ -12,7 +12,6 @@
 double current_angle[3] = {0, 0, 0};
 uint16_t motionplus_cal[3] = {7904,7835,8009};
 int reset_motionplus = 1;
-QUATERNION quat = {0, 0, 0, 0};
 cwiid_wiimote_t *wiimote;
 
 
@@ -30,7 +29,6 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 	int16_t angle_calibrated;
 	double angle[3];
 	int i;
-	QUATERNION instant_q;
 	
 	if (reset_motionplus)
 	{
@@ -40,7 +38,6 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 			current_angle[i] = 0;
 		}
 		reset_motionplus = 0;
-		quaternion_from_euler(&quat, 0, 0, 0);
 	}
 	
 	for (i=0; i<3; i++)
@@ -53,9 +50,7 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 	  if (fabs(angle[i]) > 1.0)
 			current_angle[i] += angle[i];
 	}
-//printf("%5f %5f %5f\n", angle[0], angle[1], angle[2]);
-	quaternion_from_euler(&instant_q, angle[0], angle[1], angle[2]);
-	quaternion_multiply(&quat, &quat, &instant_q);
+	motionplus_motion(angle[0], angle[1], angle[2]);
 }
 
 void button_event(int buttons)
