@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <GL/glut.h>
 #include <cwiid.h>
+#include <math.h>
 
 /* macros */
 
@@ -48,6 +49,8 @@ static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
 
+double current_angle[3] = {0, 0, 0};
+uint16_t motionplus_cal[3] = {7904,7835,8009};
 
 /*
   ----------------------------------------------------------------------
@@ -275,6 +278,8 @@ static void display_func ( void )
 		else		draw_density ();
 
 	post_display ();
+
+	printf("%10f %10f %10f\n", current_angle[0], current_angle[1], current_angle[2]);
 }
 
 
@@ -319,7 +324,21 @@ void err(cwiid_wiimote_t *wiimote, const char *s, va_list ap)
 
 void motionplus_event(struct cwiid_motionplus_mesg mesg)
 {
-	printf("motion plus mesg\n");
+	int16_t angle_calibrated;
+	double angle;
+	int i;
+	
+	for (i=0; i<3; i++)
+	{
+		angle_calibrated = mesg.angle_rate[i] - motionplus_cal[i];
+		if (mesg.low_speed[i])
+			angle = (double)angle_calibrated / 20.0;
+		else
+			angle = (double)angle_calibrated / 4.0;
+	  if (fabs(angle) > 1.0)
+			current_angle[i] += angle;
+	}
+	//d[IX(i,j)] = source;
 }
 
 void cwiid_callback(cwiid_wiimote_t *wiimote, int mesg_count,
