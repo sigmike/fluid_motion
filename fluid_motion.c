@@ -14,11 +14,14 @@
   =======================================================================
 */
 
+#define WIIMOTE_ENABLED
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
 #include <cwiid.h>
 #include <math.h>
+#include "quaternion.h"
 
 /* macros */
 
@@ -52,6 +55,9 @@ static int omx, omy, mx, my;
 static double current_angle[3] = {0, 0, 0};
 static uint16_t motionplus_cal[3] = {7904,7835,8009};
 static int reset_motionplus = 1;
+QUATERNION quat = {0, 0, 0, 0};
+
+
 /*
   ----------------------------------------------------------------------
    free/clear/allocate simulation data
@@ -284,9 +290,29 @@ static void display_func ( void )
 		if ( dvel ) draw_velocity ();
 		else		draw_density ();
 
+	VECTOR3 axis;
+	VFLOAT angle;
+	quaternion_to_axisangle(&axis, &angle, &quat);
+	printf("x=%10f y=%10f z=%10f angle=%10f\n", axis.x, axis.y, axis.z, angle);
+	
+	glColor3f ( 1.0f, 1.0f, 1.0f );
+	glLineWidth ( 1.0f );
+
+	
+	glPushMatrix();
+	glTranslatef(0.5, 0.5, 0.0);
+	glRotatef(axis.x, axis.y, axis.z, angle);
+	glBegin ( GL_LINES );
+
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, 1.0);
+
+	glEnd ();
+	glPopMatrix();
+	
+	
 	post_display ();
 
-	printf("%10f %10f %10f\n", current_angle[0], current_angle[1], current_angle[2]);
 }
 
 
@@ -329,74 +355,12 @@ void err(cwiid_wiimote_t *wiimote, const char *s, va_list ap)
 	printf("\n");
 }
 
-typedef double VFLOAT;
-
-typedef struct {
-	VFLOAT x, y, z;
-} VECTOR3;
-
-typedef struct {
-	VFLOAT x, y, z, w;
-} QUATERNION;
-
-#define TOLERANCE 0.00001f
-
-void quaternion_normalise(QUATERNION *q)
-{
-	VFLOAT mag;
-	VFLOAT mag2 = q->w * q->w + q->x * q->x + q->y * q->y + q->z * q->z;
-	// Don't normalize if we don't have to
-	if (fabs(mag2 - 1.0f) > TOLERANCE) {
-		mag = sqrt(mag2);
-		q->w /= mag;
-		q->x /= mag;
-		q->y /= mag;
-		q->z /= mag;
-	}
-}
-
-void quaternion_multiply( QUATERNION *r, QUATERNION *a, QUATERNION *b )
-{
-	r->x = a->w * b->x + a->x * b->w + a->y * b->z - a->z * b->y;
-	r->y = a->w * b->y + a->y * b->w + a->z * b->x - a->x * b->z;
-	r->z = a->w * b->z + a->z * b->w + a->x * b->y - a->y * b->x;
-	r->w = a->w * b->w - a->x * b->x - a->y * b->y - a->z * b->z;
-}
-
-
-void quaternion_from_axisangle( QUATERNION *q, VECTOR3 *axis, VFLOAT angle)
-{
-	double sin_a = sin( angle / 2 );
-	double cos_a = cos( angle / 2 );
-
-	q->x = axis->x * sin_a;
-	q->y = axis->y * sin_a;
-	q->z = axis->z * sin_a;
-	q->w = cos_a;
-
-	quaternion_normalise( q );
-}
-
-void quaternion_from_euler( QUATERNION *q, VFLOAT rx, VFLOAT ry, VFLOAT rz )
-{
-	VECTOR3 vx = { 1, 0, 0 }, vy = { 0, 1, 0 }, vz = { 0, 0, 1 };
-	QUATERNION qx, qy, qz, qt;
-
-	quaternion_from_axisangle( &qx, &vx, rx );
-	quaternion_from_axisangle( &qy, &vy, ry );
-	quaternion_from_axisangle( &qz, &vz, rz );
-
-	quaternion_multiply( &qt, &qx, &qy );
-	quaternion_multiply( q,  &qt, &qz );
-}
-
-QUATERNION quat = {0, 0, 0, 0};
-
 void motionplus_event(struct cwiid_motionplus_mesg mesg)
 {
 	int16_t angle_calibrated;
-	double angle;
+	double angle[3];
 	int i;
+	QUATERNION instant_q;
 	
 	if (reset_motionplus)
 	{
@@ -406,18 +370,22 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 			current_angle[i] = 0;
 		}
 		reset_motionplus = 0;
+		quaternion_from_euler(&quat, 0, 0, 0);
 	}
 	
 	for (i=0; i<3; i++)
 	{
 		angle_calibrated = mesg.angle_rate[i] - motionplus_cal[i];
 		if (mesg.low_speed[i])
-			angle = (double)angle_calibrated / 20.0;
+			angle[i] = (double)angle_calibrated / 20.0 / 180.0 * M_PI;
 		else
-			angle = (double)angle_calibrated / 4.0;
-	  if (fabs(angle) > 1.0)
-			current_angle[i] += angle;
+			angle[i] = (double)angle_calibrated / 4.0 / 180.0 * M_PI;
+	  if (fabs(angle[i]) > 1.0)
+			current_angle[i] += angle[i];
 	}
+//printf("%5f %5f %5f\n", angle[0], angle[1], angle[2]);
+	quaternion_from_euler(&instant_q, angle[0], angle[1], angle[2]);
+	quaternion_multiply(&quat, &quat, &instant_q);
 }
 
 void button_event(int buttons)
@@ -545,7 +513,8 @@ void cwiid_callback(cwiid_wiimote_t *wiimote, int mesg_count,
 
 int main ( int argc, char ** argv )
 {
-	cwiid_wiimote_t *wiimote;	/* wiimote handle */
+#ifdef WIIMOTE_ENABLED
+cwiid_wiimote_t *wiimote;	/* wiimote handle */
 	bdaddr_t bdaddr;	/* bluetooth device address */
 	unsigned char rpt_mode = 0;
 	
@@ -571,6 +540,7 @@ int main ( int argc, char ** argv )
 	if (cwiid_set_rpt_mode(wiimote, rpt_mode)) {
 		fprintf(stderr, "Error setting report mode\n");
 	}
+#endif
 
 	glutInit ( &argc, argv );
 
@@ -621,12 +591,12 @@ int main ( int argc, char ** argv )
 	open_glut_window ();
 
 	glutMainLoop ();
-
+#ifdef WIIMOTE_ENABLED
 	if (cwiid_close(wiimote)) {
 		fprintf(stderr, "Error on wiimote disconnect\n");
 		return -1;
 	}
-	
+#endif
 	exit ( 0 );
 }
 
