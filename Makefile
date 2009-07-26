@@ -1,3 +1,3 @@
-demo: demo.c solver.c
-	gcc demo.c solver.c -lGL -lGLU -lglut -o demo
+fluid_motion: fluid_motion.c solver.c
+	gcc fluid_motion.c solver.c -lGL -lGLU -lglut -o fluid_motion
 
