@@ -49,9 +49,9 @@ static int win_x, win_y;
 static int mouse_down[3];
 static int omx, omy, mx, my;
 
-double current_angle[3] = {0, 0, 0};
-uint16_t motionplus_cal[3] = {7904,7835,8009};
-
+static double current_angle[3] = {0, 0, 0};
+static uint16_t motionplus_cal[3] = {7904,7835,8009};
+static int reset_motionplus = 1;
 /*
   ----------------------------------------------------------------------
    free/clear/allocate simulation data
@@ -182,10 +182,18 @@ static void draw_density ( void )
 static void get_from_UI ( float * d, float * u, float * v )
 {
 	int i, j, size = (N+2)*(N+2);
+	int x, y;
 
 	for ( i=0 ; i<size ; i++ ) {
 		u[i] = v[i] = d[i] = 0.0f;
 	}
+
+	/*
+	x = (current_angle[0] + 1000) / 100.0;
+	y = (current_angle[1] + 1000) / 100.0;
+	printf("%5d %5d\n", x, y);
+	d[IX(x,y)] = 100.0;
+	*/
 
 	if ( !mouse_down[0] && !mouse_down[2] ) return;
 
@@ -328,6 +336,16 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 	double angle;
 	int i;
 	
+	if (reset_motionplus)
+	{
+		for (i=0; i<3; i++)
+		{
+			motionplus_cal[i] = mesg.angle_rate[i];
+			current_angle[i] = 0;
+		}
+		reset_motionplus = 0;
+	}
+	
 	for (i=0; i<3; i++)
 	{
 		angle_calibrated = mesg.angle_rate[i] - motionplus_cal[i];
@@ -338,7 +356,12 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 	  if (fabs(angle) > 1.0)
 			current_angle[i] += angle;
 	}
-	//d[IX(i,j)] = source;
+}
+
+void button_event(int buttons)
+{
+	if (buttons & CWIID_BTN_B)
+		reset_motionplus = 1;
 }
 
 void cwiid_callback(cwiid_wiimote_t *wiimote, int mesg_count,
@@ -377,6 +400,7 @@ void cwiid_callback(cwiid_wiimote_t *wiimote, int mesg_count,
 			break;
 		case CWIID_MESG_BTN:
 			printf("Button Report: %.4X\n", mesg[i].btn_mesg.buttons);
+			button_event(mesg[i].btn_mesg.buttons);
 			break;
 		case CWIID_MESG_ACC:
 			printf("Acc Report: x=%d, y=%d, z=%d\n",
@@ -481,6 +505,7 @@ int main ( int argc, char ** argv )
 	}
 	cwiid_enable(wiimote, CWIID_FLAG_MOTIONPLUS);
 	toggle_bit(rpt_mode, CWIID_RPT_EXT);
+	toggle_bit(rpt_mode, CWIID_RPT_BTN);
 	if (cwiid_set_rpt_mode(wiimote, rpt_mode)) {
 		fprintf(stderr, "Error setting report mode\n");
 	}
