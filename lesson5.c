@@ -12,6 +12,7 @@
 #include <unistd.h>     // needed to sleep
 #include <stdlib.h>
 #include "wiimote.h"
+#include <pthread.h>
 
 /* ASCII code for the escape key. */
 #define ESCAPE 27
@@ -29,6 +30,18 @@ float phi = 0;
 float theta = 0;
 float psi = 0;
 float motionplus_matrix[16];
+
+typedef struct {
+	float phi;
+	float theta;
+	float psi;
+} motionplus_rotation_t;
+
+#define MAX_ROTATIONS 100
+motionplus_rotation_t motionplus_rotations[MAX_ROTATIONS];
+int motionplus_rotation_count = 0;
+pthread_mutex_t motionplus_rotation_mutex;
+int motionplus_reset_rotation = 1;
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
 void InitGL(int Width, int Height)	        // We call this right after our OpenGL window is created.
@@ -65,7 +78,34 @@ void ReSizeGLScene(int Width, int Height)
 /* The main drawing function. */
 void DrawGLScene()
 {
-  glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
+	int i;
+	motionplus_rotation_t *rotation;
+	
+	pthread_mutex_lock(&motionplus_rotation_mutex);
+	if (motionplus_reset_rotation)
+	{
+		glPushMatrix();
+		glLoadIdentity();
+		glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
+		glPopMatrix();
+		motionplus_reset_rotation = 0;
+	} else {
+		for (i=0; i<motionplus_rotation_count; i++)
+		{
+			rotation = &motionplus_rotations[i];
+			glPushMatrix();
+			glLoadMatrixf(motionplus_matrix);
+			glRotatef(rotation->phi,   1.0f, 0.0f, 0.0f);
+			glRotatef(rotation->theta, 0.0f, 1.0f, 0.0f);
+			glRotatef(rotation->psi,   0.0f, 0.0f, 1.0f);
+			glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
+			glPopMatrix();
+		}
+		motionplus_rotation_count = 0;
+	}
+	pthread_mutex_unlock(&motionplus_rotation_mutex);
+
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
   glLoadIdentity();				// Reset The View
 
   glTranslatef(-1.5f,0.0f,-6.0f);		// Move Left 1.5 Units And Into The Screen 6.0
@@ -111,11 +151,7 @@ void DrawGLScene()
 
   glLoadIdentity();				// make sure we're no longer rotated.
   glTranslatef(1.5f,0.0f,-7.0f);		// Move Right 3 Units, and back into the screen 7
-	/*
-  glRotatef(phi,   1.0f, 0.0f, 0.0f);
-  glRotatef(theta, 0.0f, 1.0f, 0.0f);
-  glRotatef(psi,   0.0f, 0.0f, 1.0f);
-	*/
+	
 	glMultMatrixf(motionplus_matrix);
   glTranslatef(1.0f,0.0f,0.0f);		// Move Right 3 Units, and back into the screen 7
 	
@@ -196,6 +232,7 @@ void keyPressed(unsigned char key, int x, int y)
 int main(int argc, char **argv) 
 {  
 	wiimote_init();
+	pthread_mutex_init(&motionplus_rotation_mutex, NULL);
   /* Initialize GLUT state - glut will take any command line arguments that pertain to it or 
      X Windows - look at its documentation at http://reality.sgi.com/mjk/spec3/spec3.html */  
   glutInit(&argc, argv);  
@@ -245,16 +282,11 @@ int main(int argc, char **argv)
 
 void motionplus_motion(double mphi, double mtheta, double mpsi)
 {
-	glPushMatrix();
-	glLoadMatrixf(motionplus_matrix);
-  glRotatef(mphi,   1.0f, 0.0f, 0.0f);
-  glRotatef(mtheta, 0.0f, 1.0f, 0.0f);
-  glRotatef(mpsi,   0.0f, 0.0f, 1.0f);
-	glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
-	glPopMatrix();
-	phi -= mphi;
-	theta -= mtheta;
-	psi -= mpsi;
+	motionplus_rotation_t rotation = {mphi, mtheta, mpsi};
+	
+	pthread_mutex_lock(&motionplus_rotation_mutex);
+	motionplus_rotations[motionplus_rotation_count++] = rotation;
+	pthread_mutex_unlock(&motionplus_rotation_mutex);
 }
 
 
@@ -263,13 +295,9 @@ void button_event(int buttons)
 	if (buttons & CWIID_BTN_B)
 	{
 		reset_motionplus = 1;
-		phi = 0;
-		theta = 0;
-		psi = 0;
-		glPushMatrix();
-		glLoadIdentity();
-		glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
-		glPopMatrix();
+		pthread_mutex_lock(&motionplus_rotation_mutex);
+		motionplus_reset_rotation = 1;
+		pthread_mutex_unlock(&motionplus_rotation_mutex);
 	}
 }
 
