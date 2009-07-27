@@ -97,9 +97,9 @@ void DrawGLScene()
 			rotation = &motionplus_rotations[i];
 			glPushMatrix();
 			glLoadMatrixf(motionplus_matrix);
-			glRotatef(rotation->phi,   1.0f, 0.0f, 0.0f);
-			glRotatef(rotation->theta, 0.0f, 1.0f, 0.0f);
-			glRotatef(rotation->psi,   0.0f, 0.0f, 1.0f);
+			glRotatef(-rotation->phi,   1.0f, 0.0f, 0.0f);
+			glRotatef(-rotation->theta, 0.0f, 1.0f, 0.0f);
+			glRotatef(-rotation->psi,   0.0f, 0.0f, 1.0f);
 			glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
 			glPopMatrix();
 		}
