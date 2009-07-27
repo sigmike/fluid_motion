@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include "wiimote.h"
 #include <pthread.h>
+#include <math.h>
 
 /* ASCII code for the escape key. */
 #define ESCAPE 27
@@ -86,6 +87,7 @@ void DrawGLScene()
 	{
 		glPushMatrix();
 		glLoadIdentity();
+		glRotatef(-90.0, 1.0f, 0.0f, 0.0f);
 		glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
 		glPopMatrix();
 		motionplus_reset_rotation = 0;
@@ -284,7 +286,10 @@ void motionplus_motion(double mphi, double mtheta, double mpsi)
 	motionplus_rotation_t rotation = {mphi, mtheta, mpsi};
 	
 	pthread_mutex_lock(&motionplus_rotation_mutex);
-	motionplus_rotations[motionplus_rotation_count++] = rotation;
+	if (motionplus_reset_rotation >= MAX_ROTATIONS)
+		printf("rotations overflow\n");
+	else
+		motionplus_rotations[motionplus_rotation_count++] = rotation;
 	pthread_mutex_unlock(&motionplus_rotation_mutex);
 }
 
