@@ -110,7 +110,7 @@ void DrawGLScene()
 
   glTranslatef(-1.5f,0.0f,-6.0f);		// Move Left 1.5 Units And Into The Screen 6.0
 	
-  glRotatef(rtri,0.0f,1.0f,0.0f);		// Rotate The Pyramid On The Y axis 
+	glMultMatrixf(motionplus_matrix);
 
   // draw a pyramid (in smooth coloring mode)
   glBegin(GL_POLYGON);				// start drawing a pyramid
@@ -153,7 +153,6 @@ void DrawGLScene()
   glTranslatef(1.5f,0.0f,-7.0f);		// Move Right 3 Units, and back into the screen 7
 	
 	glMultMatrixf(motionplus_matrix);
-  glTranslatef(1.0f,0.0f,0.0f);		// Move Right 3 Units, and back into the screen 7
 	
   //glRotatef(rquad,1.0f,1.0f,1.0f);		// Rotate The Cube On X, Y, and Z
 
