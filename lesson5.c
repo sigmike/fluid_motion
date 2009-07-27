@@ -110,11 +110,12 @@ void DrawGLScene()
 
   glLoadIdentity();				// make sure we're no longer rotated.
   glTranslatef(1.5f,0.0f,-7.0f);		// Move Right 3 Units, and back into the screen 7
-	
-  //glRotatef(rquad,1.0f,1.0f,1.0f);		// Rotate The Cube On X, Y, and Z
   glRotatef(phi,   1.0f, 0.0f, 0.0f);
   glRotatef(theta, 0.0f, 1.0f, 0.0f);
   glRotatef(psi,   0.0f, 0.0f, 1.0f);
+  glTranslatef(1.0f,0.0f,0.0f);		// Move Right 3 Units, and back into the screen 7
+	
+  //glRotatef(rquad,1.0f,1.0f,1.0f);		// Rotate The Cube On X, Y, and Z
 
   // draw a cube (6 quadrilaterals)
   glBegin(GL_QUADS);				// start drawing the cube.
@@ -245,4 +246,15 @@ void motionplus_motion(double mphi, double mtheta, double mpsi)
 	psi -= mpsi;
 }
 
+
+void button_event(int buttons)
+{
+	if (buttons & CWIID_BTN_B)
+	{
+		reset_motionplus = 1;
+		phi = 0;
+		theta = 0;
+		psi = 0;
+	}
+}
 

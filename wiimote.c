@@ -53,12 +53,6 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 	motionplus_motion(angle[0], angle[1], angle[2]);
 }
 
-void button_event(int buttons)
-{
-	if (buttons & CWIID_BTN_B)
-		reset_motionplus = 1;
-}
-
 void cwiid_callback(cwiid_wiimote_t *wiimote, int mesg_count,
                     union cwiid_mesg mesg[], struct timespec *timestamp)
 {
