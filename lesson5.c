@@ -28,6 +28,7 @@ float rquad = 0.0f;
 float phi = 0;
 float theta = 0;
 float psi = 0;
+float motionplus_matrix[16];
 
 /* A general OpenGL initialization function.  Sets all of the initial parameters. */
 void InitGL(int Width, int Height)	        // We call this right after our OpenGL window is created.
@@ -110,9 +111,12 @@ void DrawGLScene()
 
   glLoadIdentity();				// make sure we're no longer rotated.
   glTranslatef(1.5f,0.0f,-7.0f);		// Move Right 3 Units, and back into the screen 7
+	/*
   glRotatef(phi,   1.0f, 0.0f, 0.0f);
   glRotatef(theta, 0.0f, 1.0f, 0.0f);
   glRotatef(psi,   0.0f, 0.0f, 1.0f);
+	*/
+	glMultMatrixf(motionplus_matrix);
   glTranslatef(1.0f,0.0f,0.0f);		// Move Right 3 Units, and back into the screen 7
 	
   //glRotatef(rquad,1.0f,1.0f,1.0f);		// Rotate The Cube On X, Y, and Z
@@ -241,6 +245,13 @@ int main(int argc, char **argv)
 
 void motionplus_motion(double mphi, double mtheta, double mpsi)
 {
+	glPushMatrix();
+	glLoadMatrixf(motionplus_matrix);
+  glRotatef(mphi,   1.0f, 0.0f, 0.0f);
+  glRotatef(mtheta, 0.0f, 1.0f, 0.0f);
+  glRotatef(mpsi,   0.0f, 0.0f, 1.0f);
+	glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
+	glPopMatrix();
 	phi -= mphi;
 	theta -= mtheta;
 	psi -= mpsi;
@@ -255,6 +266,10 @@ void button_event(int buttons)
 		phi = 0;
 		theta = 0;
 		psi = 0;
+		glPushMatrix();
+		glLoadIdentity();
+		glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
+		glPopMatrix();
 	}
 }
 
