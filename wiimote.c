@@ -30,6 +30,11 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 	double angle[3];
 	int i;
 	
+	struct timeval tv;
+	
+	gettimeofday(&tv, NULL);
+	//printf("%15d %15d\n", tv.tv_sec, tv.tv_usec);
+	
 	if (reset_motionplus)
 	{
 		for (i=0; i<3; i++)
@@ -43,10 +48,11 @@ void motionplus_event(struct cwiid_motionplus_mesg mesg)
 	for (i=0; i<3; i++)
 	{
 		angle_calibrated = mesg.angle_rate[i] - motionplus_cal[i];
+		//printf("calibrated angle %d : %5d, low_speed=%d\n", i, angle_calibrated, mesg.low_speed[i]);
 		if (mesg.low_speed[i])
-			angle[i] = (double)angle_calibrated / 20.0 / 180.0 * M_PI;
+			angle[i] = (double)angle_calibrated / 20.0;
 		else
-			angle[i] = (double)angle_calibrated / 4.0 / 180.0 * M_PI;
+			angle[i] = (double)angle_calibrated / 4.0;
 	  if (fabs(angle[i]) > 1.0)
 			current_angle[i] += angle[i];
 	}
@@ -89,7 +95,7 @@ void cwiid_callback(cwiid_wiimote_t *wiimote, int mesg_count,
 			break;
 		case CWIID_MESG_BTN:
 			printf("Button Report: %.4X\n", mesg[i].btn_mesg.buttons);
-			button_event(mesg[i].btn_mesg.buttons);
+			button_event(wiimote, mesg[i].btn_mesg.buttons);
 			break;
 		case CWIID_MESG_ACC:
 			printf("Acc Report: x=%d, y=%d, z=%d\n",

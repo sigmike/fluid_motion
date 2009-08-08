@@ -97,9 +97,9 @@ void DrawGLScene()
 			rotation = &motionplus_rotations[i];
 			glPushMatrix();
 			glLoadMatrixf(motionplus_matrix);
-			glRotatef(-rotation->phi,   1.0f, 0.0f, 0.0f);
-			glRotatef(-rotation->theta, 0.0f, 1.0f, 0.0f);
-			glRotatef(-rotation->psi,   0.0f, 0.0f, 1.0f);
+			glRotatef(-rotation->phi / 100.0,   1.0f, 0.0f, 0.0f);
+			glRotatef(-rotation->theta / 100.0, 0.0f, 1.0f, 0.0f);
+			glRotatef(rotation->psi / 100.0,   0.0f, 0.0f, 1.0f);
 			glGetFloatv(GL_MODELVIEW_MATRIX, motionplus_matrix);
 			glPopMatrix();
 		}
@@ -292,14 +292,20 @@ void motionplus_motion(double mphi, double mtheta, double mpsi)
 }
 
 
-void button_event(int buttons)
+void button_event(cwiid_wiimote_t *wiimote, int buttons)
 {
+	static int rumble = 0;
 	if (buttons & CWIID_BTN_B)
 	{
 		reset_motionplus = 1;
 		pthread_mutex_lock(&motionplus_rotation_mutex);
 		motionplus_reset_rotation = 1;
 		pthread_mutex_unlock(&motionplus_rotation_mutex);
+	}
+	if (buttons & CWIID_BTN_A)
+	{
+		rumble = !rumble;
+		cwiid_set_rumble(wiimote, rumble);
 	}
 }
 
